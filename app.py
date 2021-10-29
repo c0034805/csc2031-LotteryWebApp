@@ -9,7 +9,6 @@ from flask_login import LoginManager, current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_talisman import Talisman
 
-
 # CONFIG
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lottery.db'
@@ -18,7 +17,6 @@ app.config['SECRET_KEY'] = 'LongAndRandomSecretKey'
 
 # initialise database
 db = SQLAlchemy(app)
-
 
 # Security Headers
 csp = {
@@ -37,14 +35,16 @@ def requires_roles(*roles):
         def wrapped(*args, **kwargs):
             if current_user.role not in roles:
                 logging.warning('SECURITY - Unauthorised access attempt [%s, %s, %s, %s]',
-                             current_user.id,
-                             current_user.email,
-                             current_user.role,
-                             request.remote_addr)
+                                current_user.id,
+                                current_user.email,
+                                current_user.role,
+                                request.remote_addr)
                 # Redirect the user to an unauthorised notice!
                 return render_template('403.html')
             return f(*args, **kwargs)
+
         return wrapped
+
     return wrapper
 
 
@@ -89,6 +89,7 @@ if __name__ == "__main__":
     free_port = free_socket.getsockname()[1]
     free_socket.close()
 
+
     # LOGGING
     class SecurityFilter(logging.Filter):
         def filter(self, record):
@@ -113,9 +114,11 @@ if __name__ == "__main__":
 
     from models import User
 
+
     @login_manager.user_loader
     def load_user(id):
         return User.query.get(int(id))
+
 
     # BLUEPRINTS
     # import blueprints
