@@ -1,8 +1,13 @@
 # IMPORTS
 import socket
-from flask import Flask, render_template
-from flask_login import LoginManager
+
+import logging
+from functools import wraps
+
+from flask import Flask, render_template, request
+from flask_login import LoginManager, current_user
 from flask_sqlalchemy import SQLAlchemy
+
 
 # CONFIG
 app = Flask(__name__)
@@ -12,6 +17,24 @@ app.config['SECRET_KEY'] = 'LongAndRandomSecretKey'
 
 # initialise database
 db = SQLAlchemy(app)
+
+
+# FUNCTIONS
+def requires_roles(*roles):
+    def wrapper(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            if current_user.role not in roles:
+                logging.warning('SECURITY - Unauthorised access attempt [%s, %s, %s, %s]',
+                             current_user.id,
+                             current_user.email,
+                             current_user.role,
+                             request.remote_addr)
+                # Redirect the user to an unauthorised notice!
+                return render_template('403.html')
+            return f(*args, **kwargs)
+        return wrapped
+    return wrapper
 
 
 # HOME PAGE VIEW
@@ -53,6 +76,25 @@ if __name__ == "__main__":
     free_socket.listen(5)
     free_port = free_socket.getsockname()[1]
     free_socket.close()
+
+    # LOGGING
+    class SecurityFilter(logging.Filter):
+        def filter(self, record):
+            return "SECURITY" in record.getMessage()
+
+
+    # create file handler to log security messages to file
+    fh = logging.FileHandler('lottery.log', mode='a')
+    fh.setLevel(logging.WARNING)
+    fh.addFilter(SecurityFilter())
+    fh_formatter = logging.Formatter('%(asctime)s : %(message)s', '%m/%d/%Y %I:%M:%S %p')
+    fh.setFormatter(fh_formatter)
+
+    # add handlers to root logger
+    logger = logging.getLogger()
+    logger.addHandler(fh)
+    logger.propagate = False
+
 
     login_manager = LoginManager()
     login_manager.login_view = 'users.login'
