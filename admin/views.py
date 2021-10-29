@@ -1,9 +1,9 @@
 # IMPORTS
+import copy
+
 from flask import Blueprint, render_template, request, flash
 from flask_login import login_required, current_user
-
 from app import db, requires_roles
-
 from models import User, Draw
 
 # CONFIG
@@ -55,7 +55,9 @@ def create_winning_draw():
     submitted_draw.strip()
 
     # create a new draw object with the form data.
-    new_winning_draw = Draw(user_id=0, draw=submitted_draw, win=True, round=round, draw_key=current_user.draw_key)
+    new_winning_draw = Draw(user_id=current_user.id, draw=submitted_draw, win=True, round=round, draw_key=current_user.draw_key)
+    global winning_draw_key
+    winning_draw_key = current_user.draw_key
 
     # add the new winning draw to the database
     db.session.add(new_winning_draw)
@@ -78,7 +80,9 @@ def view_winning_draw():
     # if a winning draw exists
     if current_winning_draw:
         # re-render admin page with current winning draw and lottery round
-        return render_template('admin.html', winning_draw=current_winning_draw, name=current_user.firstname)
+        draw_copy = copy.deepcopy(current_winning_draw)
+        draw_copy.view_draw(winning_draw_key)
+        return render_template('admin.html', winning_draw=draw_copy, name=current_user.firstname)
 
     # if no winning draw exists, rerender admin page
     flash("No winning draw exists. Please add winning draw.")
@@ -97,6 +101,9 @@ def run_lottery():
     # if current unplayed winning draw exists
     if current_winning_draw:
 
+        win_copy = copy.deepcopy(current_winning_draw)
+        win_copy.view_draw(winning_draw_key)
+
         # get all unplayed user draws
         user_draws = Draw.query.filter_by(win=False, played=False).all()
         results = []
@@ -114,12 +121,15 @@ def run_lottery():
 
                 # get the owning user (instance/object)
                 user = User.query.filter_by(id=draw.user_id).first()
+                user_draw_copy = copy.deepcopy(draw)
+
+                user_draw_copy.view_draw(user.draw_key)
 
                 # if user draw matches current unplayed winning draw
-                if draw.draw == current_winning_draw.draw:
+                if user_draw_copy.draw == win_copy.draw:
 
                     # add details of winner to list of results
-                    results.append((current_winning_draw.round, draw.draw, draw.user_id, user.email))
+                    results.append((current_winning_draw.round, user_draw_copy.draw, draw.user_id, user.email))
 
                     # update draw as a winning draw (this will be used to highlight winning draws in the user's
                     # lottery page)
