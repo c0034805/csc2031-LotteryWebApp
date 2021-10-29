@@ -7,6 +7,7 @@ from functools import wraps
 from flask import Flask, render_template, request
 from flask_login import LoginManager, current_user
 from flask_sqlalchemy import SQLAlchemy
+from flask_talisman import Talisman
 
 
 # CONFIG
@@ -17,6 +18,16 @@ app.config['SECRET_KEY'] = 'LongAndRandomSecretKey'
 
 # initialise database
 db = SQLAlchemy(app)
+
+
+# Security Headers
+csp = {
+    'default-src': [
+        '\'self\'',
+        'https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.min.css'
+    ],
+}
+talisman = Talisman(app, content_security_policy=csp)
 
 
 # FUNCTIONS
@@ -40,6 +51,7 @@ def requires_roles(*roles):
 # HOME PAGE VIEW
 @app.route('/')
 def index():
+    print(request.headers)
     return render_template('index.html')
 
 
@@ -95,7 +107,6 @@ if __name__ == "__main__":
     logger.addHandler(fh)
     logger.propagate = False
 
-
     login_manager = LoginManager()
     login_manager.login_view = 'users.login'
     login_manager.init_app(app)
@@ -117,4 +128,4 @@ if __name__ == "__main__":
     app.register_blueprint(admin_blueprint)
     app.register_blueprint(lottery_blueprint)
 
-    app.run(host=my_host, port=free_port, debug=True)
+    app.run(host=my_host, port=free_port, debug=True, ssl_context=('cert.pem', 'key.pem'))
