@@ -56,7 +56,8 @@ class RegisterForm(FlaskForm):
     ])
     pin_key = StringField(validators=[
         Required(),
-        Length(min=32, max=32, message="PIN key must be exactly 32 characters long.")
+        Length(min=32, max=32, message="PIN key must be exactly 32 characters long."),
+        character_check
     ])
     submit = SubmitField(validators=[
         Required()
@@ -69,6 +70,9 @@ class LoginForm(FlaskForm):
         Email()
     ])
     password = PasswordField(validators=[
+        Required()
+    ])
+    pin = StringField(validators=[
         Required()
     ])
     submit = SubmitField()

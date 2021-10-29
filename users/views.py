@@ -1,6 +1,8 @@
 # IMPORTS
 from datetime import datetime
 
+import pyotp
+
 import logging
 from functools import wraps
 
@@ -67,14 +69,18 @@ def login():
 
             return render_template('login.html', form=form)
 
-        login_user(user)
+        if pyotp.TOTP(user.pin_key).verify(form.pin.data):
 
-        user.last_logged_in = user.current_logged_in
-        user.current_logged_in = datetime.now()
-        db.session.add(user)
-        db.session.commit()
+            login_user(user)
 
-        return profile()
+            user.last_logged_in = user.current_logged_in
+            user.current_logged_in = datetime.now()
+            db.session.add(user)
+            db.session.commit()
+
+            return profile()
+        else:
+            flash("You have supplied an invalid 2FA token!", "danger")
 
     return render_template('login.html', form=form)
 
