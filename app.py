@@ -93,7 +93,6 @@ if __name__ == "__main__":
     free_port = free_socket.getsockname()[1]
     free_socket.close()
 
-
     # LOGGING
     class SecurityFilter(logging.Filter):
         def filter(self, record):

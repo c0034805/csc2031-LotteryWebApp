@@ -1,3 +1,4 @@
+# IMPORTS
 import base64
 from datetime import datetime
 
@@ -11,6 +12,7 @@ from cryptography.fernet import Fernet
 from app import db
 
 
+# ENCRYPTION FUNCTIONS
 def encrypt(data, draw_key):
     return Fernet(draw_key).encrypt(bytes(data, 'utf-8'))
 
@@ -19,6 +21,23 @@ def decrypt(data, draw_key):
     return Fernet(draw_key).decrypt(data).decode("utf-8")
 
 
+# DATABASE INITIALISATION
+def init_db():
+    db.drop_all()
+    db.create_all()
+    admin = User(email='admin@email.com',
+                 password='Admin1!',
+                 pin_key='BFB5S34STBLZCOB22K6PPYDCMZMH46OJ',
+                 firstname='Alice',
+                 lastname='Jones',
+                 phone='0191-123-4567',
+                 role='admin')
+
+    db.session.add(admin)
+    db.session.commit()
+
+
+# MODELS
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
@@ -78,23 +97,7 @@ class Draw(db.Model):
         self.match = False
         self.win = win
         self.round = round
-        
+
+    # draw decryption
     def view_draw(self, draw_key):
         self.draw = decrypt(self.draw, draw_key)
-
-
-def init_db():
-    db.drop_all()
-    db.create_all()
-    admin = User(email='admin@email.com',
-                 password='Admin1!',
-                 pin_key='BFB5S34STBLZCOB22K6PPYDCMZMH46OJ',
-                 firstname='Alice',
-                 lastname='Jones',
-                 phone='0191-123-4567',
-                 role='admin')
-
-    db.session.add(admin)
-    db.session.commit()
-
-

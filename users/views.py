@@ -8,9 +8,11 @@ from flask_login import current_user, login_user, logout_user, login_required
 
 from werkzeug.security import check_password_hash
 
-from app import db, requires_roles
-from models import User
 from users.forms import RegisterForm, LoginForm
+
+from models import User
+
+from app import db, requires_roles
 
 import pyotp
 
@@ -76,8 +78,10 @@ def login():
             # increase login attempts by 1
             session['logins'] += 1
 
+            # get user whose email matches the one entered
             user = User.query.filter_by(email=form.email.data).first()
 
+            # if a user with that email exists and the password and OTP are correct, login user and update database
             if user and check_password_hash(user.password, form.password.data) \
                     and pyotp.TOTP(user.pin_key).verify(form.pin.data):
 
@@ -91,6 +95,7 @@ def login():
                 db.session.add(user)
                 db.session.commit()
 
+                # log user login
                 logging.warning('SECURITY - Log in [%s, %s, %s]', current_user.id, current_user.email,
                                 request.remote_addr)
 
@@ -101,8 +106,10 @@ def login():
                     return redirect(url_for('users.profile'))
 
             else:
+                # log invalid login attempt
                 logging.warning('SECURITY - Invalid login attempt [%s, %s]', form.email.data, request.remote_addr)
 
+                # check number of invalid login attempts
                 if session['logins'] == 3:
                     flash('Number of incorrect logins exceeded')
                 elif session['logins'] == 2:
@@ -115,9 +122,11 @@ def login():
         return render_template('403.html')
 
 
+# user logout
 @users_blueprint.route('/logout')
 @login_required
 def logout():
+    # log user logout
     logging.warning('SECURITY - Log out [%s, %s, %s]', current_user.id, current_user.email, request.remote_addr)
 
     logout_user()

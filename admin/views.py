@@ -3,8 +3,10 @@ import copy
 
 from flask import Blueprint, render_template, request, flash
 from flask_login import login_required, current_user
-from app import db, requires_roles
+
 from models import User, Draw
+
+from app import db, requires_roles
 
 # CONFIG
 admin_blueprint = Blueprint('admin', __name__, template_folder='templates')
@@ -56,6 +58,7 @@ def create_winning_draw():
 
     # create a new draw object with the form data.
     new_winning_draw = Draw(user_id=current_user.id, draw=submitted_draw, win=True, round=round, draw_key=current_user.draw_key)
+    # save the winning draw's draw_key so it can be decrypted by any admin user
     global winning_draw_key
     winning_draw_key = current_user.draw_key
 
@@ -77,11 +80,12 @@ def view_winning_draw():
     # get winning draw from DB
     current_winning_draw = Draw.query.filter_by(win=True).first()
 
-    # if a winning draw exists
+    # if a winning draw exists, re-render admin page with current winning draw and lottery round
     if current_winning_draw:
-        # re-render admin page with current winning draw and lottery round
+        # decrypt a copy of the draw to avoid database lock errors
         draw_copy = copy.deepcopy(current_winning_draw)
         draw_copy.view_draw(winning_draw_key)
+
         return render_template('admin.html', winning_draw=draw_copy, name=current_user.firstname)
 
     # if no winning draw exists, rerender admin page
@@ -101,6 +105,7 @@ def run_lottery():
     # if current unplayed winning draw exists
     if current_winning_draw:
 
+        # decrypt a copy of the winning draw to avoid database lock errors
         win_copy = copy.deepcopy(current_winning_draw)
         win_copy.view_draw(winning_draw_key)
 
@@ -121,8 +126,8 @@ def run_lottery():
 
                 # get the owning user (instance/object)
                 user = User.query.filter_by(id=draw.user_id).first()
+                # decrypt copy of each draw to avoid database lock errors
                 user_draw_copy = copy.deepcopy(draw)
-
                 user_draw_copy.view_draw(user.draw_key)
 
                 # if user draw matches current unplayed winning draw

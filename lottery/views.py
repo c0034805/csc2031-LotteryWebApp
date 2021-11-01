@@ -1,12 +1,11 @@
 # IMPORTS
 import copy
-import logging
 
 from flask import Blueprint, render_template, request, flash
 from flask_login import login_required, current_user
 
 from app import db, requires_roles
-from models import Draw, User
+from models import Draw
 
 # CONFIG
 lottery_blueprint = Blueprint('lottery', __name__, template_folder='templates')
@@ -20,10 +19,12 @@ def lottery():
     return render_template('lottery.html')
 
 
+# add a new draw to the database
 @lottery_blueprint.route('/add_draw', methods=['POST'])
 @login_required
 @requires_roles('user')
 def add_draw():
+    # get the numbers submitted in the form
     submitted_draw = ''
     for i in range(6):
         submitted_draw += request.form.get('no' + str(i + 1)) + ' '
@@ -49,17 +50,19 @@ def view_draws():
     # get all draws that have not been played [played=0]
     playable_draws = Draw.query.filter_by(user_id=current_user.id, played=False).all()
 
-    # if playable draws exist
+    # if playable draws exist, re-render lottery page with playable draws
     if len(playable_draws) != 0:
-        # re-render lottery page with playable draws
+        # create copies of all draws to avoid database lock errors when decrypting
         draw_copies = copy.deepcopy(playable_draws)
         decrypted_draws = []
 
+        # decrypt all of the current user's unplayed draws
         for d in draw_copies:
             d.view_draw(current_user.draw_key)
             decrypted_draws.append(d)
 
         return render_template('lottery.html', playable_draws=decrypted_draws)
+    # if no playable draws exist [the user has not submitted any draws this round]
     else:
         flash('No playable draws.')
         return lottery()
@@ -75,9 +78,11 @@ def check_draws():
 
     # if played draws exist
     if len(played_draws) != 0:
+        # create copies of all of the current user's draws to avoid database lock errors when decrypting
         draw_copies = copy.deepcopy(played_draws)
         decrypted_draws = []
 
+        # decrypt all of the current user's played draws
         for d in draw_copies:
             d.view_draw(current_user.draw_key)
             decrypted_draws.append(d)
@@ -90,7 +95,7 @@ def check_draws():
         return lottery()
 
 
-# delete all played draws
+# delete all of the current user's played draws
 @lottery_blueprint.route('/play_again', methods=['POST'])
 @login_required
 @requires_roles('user')
