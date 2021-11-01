@@ -24,8 +24,12 @@ csp = {
         '\'self\'',
         'https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.min.css'
     ],
+    'script-src': [
+        '\'self\'',
+        '\'unsafe-inline\''
+    ]
 }
-talisman = Talisman(app, content_security_policy=csp)
+talisman = Talisman(app, content_security_policy=csp, x_content_type_options=False)
 
 
 # FUNCTIONS
